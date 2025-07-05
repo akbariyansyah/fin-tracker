@@ -3,11 +3,11 @@ export enum TransactionType {
   Out = "OUT",
 }
 
-
 export interface Transaction {
-    ID: string;
-    Amount: number;
-    Timestamp: string;
-    Type: TransactionType;
-    Description:string;
+  UserID?: string;
+  ID: string;
+  Amount: number;
+  CreatedAt: string;
+  Type: TransactionType;
+  Description: string;
 }
