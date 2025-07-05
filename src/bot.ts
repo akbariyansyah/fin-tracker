@@ -3,6 +3,8 @@ import dotenv from 'dotenv';
 import { ulid } from 'ulid';
 import { Transaction, TransactionType } from '../types/transaction.js';
 import { pool } from './db.js'; // include .js extension
+import { Update } from '@telegraf/types';
+import { ServerResponse, IncomingMessage } from 'http';
 
 // Load variables from .env file
 dotenv.config();
@@ -14,13 +16,21 @@ if (!BOT_TOKEN) {
 }
 
 const bot = new Telegraf(BOT_TOKEN);
-
+export const botInstance =bot;
 const formatter = new Intl.NumberFormat('id-ID', {
     style: 'currency',
     currency: 'IDR',
     minimumFractionDigits: 0, // no cents for IDR
 });
 
+
+export const handleUpdate = async (update: Update, res: ServerResponse<IncomingMessage> | undefined) => {
+  try {
+    await bot.handleUpdate(update, res);
+  } catch (err) {
+    console.error('Error handling update', err);
+  }
+};
 
 // Respond to /start
 bot.start((ctx) => {
