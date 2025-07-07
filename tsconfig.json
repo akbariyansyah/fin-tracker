@@ -8,6 +8,8 @@
     "esModuleInterop": true,
   },
   "include": [
-    "src"
-, "types/transaction.ts"  ]
+    "src",
+    "types/transaction.ts",
+    "index.ts"
+  ]
 }

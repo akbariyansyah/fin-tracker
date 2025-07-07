@@ -1,8 +1,8 @@
 import { Telegraf } from 'telegraf';
 import dotenv from 'dotenv';
 import { ulid } from 'ulid';
-import { Transaction, TransactionType } from '../types/transaction.js';
-import { pool } from './db.js'; // include .js extension
+import { Transaction, TransactionType } from './types/transaction.js';
+import { pool } from './src/db.js'; // include .js extension
 import { Update } from '@telegraf/types';
 import { ServerResponse, IncomingMessage } from 'http';
 
@@ -16,7 +16,7 @@ if (!BOT_TOKEN) {
 }
 
 const bot = new Telegraf(BOT_TOKEN);
-export const botInstance =bot;
+export const botInstance = bot;
 const formatter = new Intl.NumberFormat('id-ID', {
     style: 'currency',
     currency: 'IDR',
@@ -25,11 +25,11 @@ const formatter = new Intl.NumberFormat('id-ID', {
 
 
 export const handleUpdate = async (update: Update, res: ServerResponse<IncomingMessage> | undefined) => {
-  try {
-    await bot.handleUpdate(update, res);
-  } catch (err) {
-    console.error('Error handling update', err);
-  }
+    try {
+        await bot.handleUpdate(update, res);
+    } catch (err) {
+        console.error('Error handling update', err);
+    }
 };
 
 // Respond to /start
@@ -45,11 +45,12 @@ bot.hears('hi', (ctx) => {
 
 bot.command('out', async (ctx) => {
     try {
-        const splitted: string[] = ctx.message.text?.split(' ').slice()
-        const amount: number = Number(splitted[1])
-        const description: string = splitted[2]
+        const parts = ctx.message.text?.split(' ') ?? [];
+        const amount = Number(parts[1]);
+        const description = parts.slice(2).join(' ');
         const id = ulid();
-        const createdAt = new Date().toISOString();
+
+        const createdAt = new Date(ctx.message.date * 1000).toISOString();
         const transaction: Transaction = {
             ID: id,
             Type: TransactionType.Out,
