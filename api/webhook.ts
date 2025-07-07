@@ -1,4 +1,4 @@
-import { handleUpdate, botInstance } from '../src/bot';
+import { handleUpdate, botInstance } from '..';
 
 export default async function handler(req, res) {
   // Set the webhook on first run or if URL changed
