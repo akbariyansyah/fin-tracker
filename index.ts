@@ -5,6 +5,8 @@ import { Transaction, TransactionType } from './types/transaction.js';
 import { pool } from './src/db.js'; // include .js extension
 import { Update } from '@telegraf/types';
 import { ServerResponse, IncomingMessage } from 'http';
+import dayjs from 'dayjs';
+
 
 // Load variables from .env file
 dotenv.config();
@@ -50,7 +52,10 @@ bot.command('out', async (ctx) => {
         const description = parts.slice(2).join(' ');
         const id = ulid();
 
-        const createdAt = new Date(ctx.message.date * 1000).toISOString();
+        const createdAt = dayjs.unix(ctx.message.date)
+            .locale('Asia/Jakarta')
+            .format('YYYY-MM-DDTHH:mm:ssZ');
+
         const transaction: Transaction = {
             ID: id,
             Type: TransactionType.Out,
@@ -76,7 +81,14 @@ bot.command('out', async (ctx) => {
         console.log("error happen", err)
     } finally {
         console.log('Success');
-        ctx.reply('Saved !')
+        const sentMessage = await ctx.reply('Saved !')
+        setTimeout(() => {
+            // delete the bot’s reply after 5 seconds
+            ctx.deleteMessage(sentMessage.message_id).catch(() => {
+                // ignore if it’s already gone or deletion is not permitted
+            });
+        }, 5000);
+
     }
 })
 
@@ -84,17 +96,20 @@ bot.command('today', async (ctx) => {
     try {
         const client = await pool.connect();
         const today = new Date();
-        today.setHours(0, 0, 0, 0);
+        today.setHours(7, 0, 0, 0);
         const tomorrow = new Date(today);
         tomorrow.setDate(tomorrow.getDate() + 1);
 
-        const res = await client.query(
-            `SELECT id, type, amount, description, created_at
+        const query =   `
+       SELECT id, type, amount, description, created_at
        FROM transactions
        WHERE created_at >= $1 AND created_at < $2
-       ORDER BY created_at`,
+       ORDER BY created_at`
+        const res = await client.query(
+          query,
             [today.toISOString(), tomorrow.toISOString()]
         );
+        
         client.release();
 
         const rows = res.rows;
