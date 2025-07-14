@@ -136,6 +136,58 @@ bot.command('today', async (ctx) => {
     }
 });
 
+bot.command('week', async (ctx) => {
+  try {
+    const client = await pool.connect();
+
+    // get all transactions from the start of the current week
+    const res = await client.query(`
+      SELECT id, type, amount, description, created_at
+      FROM transactions
+      WHERE date_trunc('week', created_at) = date_trunc('week', now())
+      ORDER BY created_at
+    `);
+
+    client.release();
+
+    const rows = res.rows;
+    if (rows.length === 0) {
+      return ctx.reply("😴 No transactions recorded this week.");
+    }
+
+    // format each row into a line of HTML
+    const lines = rows.map(r => {
+      const dt = new Date(r.created_at);
+      const date = dt.toLocaleDateString('id-ID', {
+        day: '2-digit', month: '2-digit', year: 'numeric'
+      }); // e.g. "07/14/2025"
+      const time = dt.toLocaleTimeString('id-ID', {
+        hour: '2-digit', minute: '2-digit'
+      }); // e.g. "14:30"
+      const amount = formatter.format(Number(r.amount));
+      const desc = r.description
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+      return `<b>${date}</b> ${time} • <i>${r.type.toUpperCase()}</i> • <code>${amount}</code> – ${desc}`;
+    });
+
+    // sum up the week’s total
+    const total = rows.reduce((sum, r) => sum + Number(r.amount), 0);
+    const totalFormatted = formatter.format(total);
+
+    // send back as HTML
+    await ctx.replyWithHTML(
+      `<b>📆 Transactions this week</b>\n` +
+      lines.join('\n') +
+      `\n\n<b>💰 Total:</b> <code>${totalFormatted}</code>`
+    );
+  } catch (err) {
+    console.error(err);
+    ctx.reply("❌ Failed to retrieve this week's transactions.");
+  }
+});
+
 bot.command('month', async (ctx) => {
     try {
         const client = await pool.connect();
