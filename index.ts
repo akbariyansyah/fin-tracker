@@ -18,7 +18,7 @@ if (!BOT_TOKEN) {
 }
 
 const bot = new Telegraf(BOT_TOKEN);
-export const botInstance = bot;
+
 const formatter = new Intl.NumberFormat('id-ID', {
     style: 'currency',
     currency: 'IDR',
@@ -44,6 +44,53 @@ bot.hears('hi', (ctx) => {
     ctx.reply('Hey there!');
 });
 
+
+bot.command('in', async (ctx) => {
+    try {
+        const parts = ctx.message.text?.split(' ') ?? [];
+        const amount = Number(parts[1]);
+        const description = parts.slice(2).join(' ');
+        const id = ulid();
+
+        const createdAt = dayjs.unix(ctx.message.date)
+            .locale('Asia/Jakarta')
+            .format('YYYY-MM-DDTHH:mm:ssZ');
+
+        const transaction: Transaction = {
+            ID: id,
+            Type: TransactionType.In,
+            Amount: amount,
+            Description: description,
+            CreatedAt: createdAt
+        }
+        console.log('This is in message :', ctx.message.text)
+        console.log(transaction)
+        const query = `
+            INSERT INTO transactions (id, type, amount, description, created_at)
+            VALUES ($1, $2, $3, $4, $5)
+            `;
+
+        await pool.query(query, [
+            id,
+            TransactionType.In,
+            amount,
+            description,
+            createdAt,
+        ]);
+    } catch (err) {
+        console.log("error happen", err)
+    } finally {
+        console.log('Success');
+        const sentMessage = await ctx.reply('Saved !')
+        setTimeout(() => {
+            // delete the bot’s reply after 5 seconds
+            ctx.deleteMessage(sentMessage.message_id).catch(() => {
+                // ignore if it’s already gone or deletion is not permitted
+            });
+        }, 5000);
+
+    }
+})
 
 bot.command('out', async (ctx) => {
     try {
@@ -103,11 +150,11 @@ bot.command('today', async (ctx) => {
         const query =   `
        SELECT id, type, amount, description, created_at
        FROM transactions
-       WHERE created_at >= $1 AND created_at < $2
+       WHERE created_at >= $1 AND created_at < $2 and type = $3
        ORDER BY created_at`
         const res = await client.query(
           query,
-            [today.toISOString(), tomorrow.toISOString()]
+            [today.toISOString(), tomorrow.toISOString(), 'OUT']
         );
         
         client.release();
@@ -144,7 +191,7 @@ bot.command('week', async (ctx) => {
     const res = await client.query(`
       SELECT id, type, amount, description, created_at
       FROM transactions
-      WHERE date_trunc('week', created_at) = date_trunc('week', now())
+      WHERE date_trunc('week', created_at) = date_trunc('week', now()) AND type = 'OUT'
       ORDER BY created_at
     `);
 
@@ -195,7 +242,7 @@ bot.command('month', async (ctx) => {
         const res = await client.query(
             `SELECT id, type, amount, description, created_at
                 FROM transactions
-                WHERE date_trunc('month', created_at) = date_trunc('month', now())
+                WHERE date_trunc('month', created_at) = date_trunc('month', now()) AND type = 'OUT'
                 ORDER BY created_at`
         );
 
